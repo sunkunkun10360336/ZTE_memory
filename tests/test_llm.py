@@ -172,6 +172,8 @@ class DeepSeekClientTest(unittest.TestCase):
             client.chat("你好", max_tokens=0)
         with self.assertRaises(ValueError):
             client.chat([{"role": "tool", "content": "结果"}])
+        with self.assertRaises(ValueError):
+            client.chat([{"role": [], "content": "结果"}])
 
         self.assertEqual(self.server.requests, [])
 

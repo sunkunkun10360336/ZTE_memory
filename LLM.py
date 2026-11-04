@@ -239,7 +239,7 @@ def _normalize_messages(
                 raise TypeError(f"messages[{index}] 必须是包含 role/content 的字典")
             role = message.get("role")
             content = message.get("content")
-            if role not in _ALLOWED_ROLES:
+            if not isinstance(role, str) or role not in _ALLOWED_ROLES:
                 raise ValueError(
                     f"messages[{index}].role 必须是 system、user 或 assistant，"
                     f"当前为 {role!r}"
