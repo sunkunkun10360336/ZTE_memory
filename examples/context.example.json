@@ -1,0 +1,43 @@
+{
+  "items": [
+    {
+      "title": "上午 10:00 项目周会",
+      "source": "日历",
+      "detail": "同步晨报架构进展，确认下一步接入的数据来源。",
+      "happened_at": "2026-11-04T10:00:00+08:00",
+      "priority": 3,
+      "tags": ["会议", "PCE"]
+    },
+    {
+      "title": "下班前提交本周周报",
+      "source": "待办",
+      "detail": "包含晨报模块的实现与测试结果。",
+      "happened_at": "2026-11-04T18:00:00+08:00",
+      "priority": 3,
+      "tags": ["待办"]
+    },
+    {
+      "title": "关注的行业周报更新：AI Agent 与个人知识管理",
+      "source": "关注动态",
+      "detail": "本周主题是上下文工程与记忆系统设计。",
+      "happened_at": "2026-11-04T02:00:00+08:00",
+      "priority": 2,
+      "tags": ["阅读"]
+    },
+    {
+      "title": "完成晨报架构初稿",
+      "source": "工作记录",
+      "detail": "分层设计与扩展点已写入 docs/morning-report-architecture.md。",
+      "happened_at": "2026-11-03T20:00:00+08:00",
+      "priority": 1,
+      "tags": ["PCE", "文档"]
+    },
+    {
+      "title": "下一步：把日历和飞书消息接入上下文来源",
+      "source": "待办",
+      "detail": "按 ContextSource 协议实现，不需要改聚合与生成逻辑。",
+      "priority": 2,
+      "tags": ["计划"]
+    }
+  ]
+}
