@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# 每日晨报本地配置与运行产物
+/config.json
+/reports/
