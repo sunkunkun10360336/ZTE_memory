@@ -16,7 +16,7 @@ Markdown 简报，并投递到用户日常阅读的渠道（控制台、文件�
   新增来源不需要改动生成与投递逻辑。
 - **模型单一**：只调用 DeepSeek，复用仓库已有的 `LLM.py` 非流式接口。
 - **默认可靠**：单个来源失败不拖垮晨报；没有上下文时不空跑模型；投递失败可见。
-- **两种运行方式**：常驻进程按天调度，或 `--once` 交给 cron / systemd timer。
+- **两种运行方式**：常驻进程按天或按分钟间隔调度，或 `--once` 交给 cron / systemd timer。
 - **隐私优先**：API Key、Webhook 密钥走环境变量；上下文只在本机与模型请求之间流动。
 
 非目标（v0.1 不做）：多用户隔离、向量记忆检索、实时推送、事件总线、投递重试队列。
@@ -64,10 +64,10 @@ flowchart LR
 | 层 | 模块 | 职责 |
 | --- | --- | --- |
 | 配置层 | `config.py` | 读取 JSON、展开环境变量、校验时区/时间/参数；相对路径按配置文件目录解析 |
-| 输入层 | `sources.py` | 定义 `ContextSource` 协议；内置 JSON 文件来源；动态加载 Python 来源 |
+| 输入层 | `sources.py`、`feishu.py`、`github.py` | 定义 `ContextSource` 协议；JSON 文件、飞书群聊、GitHub 动态来源；动态加载 Python 来源 |
 | 聚合层 | `pipeline.py` | 汇总所有来源，按标题+时间去重，按优先级和时间排序，截断到 `max_items` |
-| 生成层 | `generator.py`、`render.py` | 构造中文提示词、调用 DeepSeek、清洗代码块、拼接固定标题与落款 |
-| 投递层 | `delivery.py` | `Sink` 协议；控制台、文件、飞书 Webhook、自定义 Python 通道；部分失败容错 |
+| 生成层 | `generator.py`、`render.py` | 构造中文提示词、调用 DeepSeek、清洗代码块、拼接标题与落款 |
+| 投递层 | `delivery.py`、`feishu.py` | `Sink` 协议；控制台、文件、飞书 Webhook、飞书群、自定义 Python 通道；部分失败容错 |
 | 调度层 | `scheduler.py`、`app.py`、`cli.py` | 计算下一次执行时间，串起一次完整运行，提供命令行入口 |
 
 ## 3. 一次运行的时序
@@ -253,7 +253,10 @@ class MySink:
 
 ### 7.3 调整提示词与模型
 
-- 提示词在 `morning_report/generator.py` 的 `SYSTEM_PROMPT` 中集中维护。
+- 提示词在 `morning_report/generator.py` 的 `SYSTEM_PROMPT` 中集中维护；
+  `report.profile` 为 `group` 时使用群聊速报提示词 `GROUP_SUMMARY_SYSTEM_PROMPT`。
+- 配置里的 `report.system_prompt` 可以完全覆盖提示词；支持 `{max_chars}` 和
+  `{max_items}` 两个占位符。
 - 模型默认 `deepseek-chat`，可通过 `report.model` 或环境变量 `DEEPSEEK_MODEL` 覆盖。
 - 生成器通过 `chat_fn` 注入，测试时不需要真实 API。
 
@@ -265,6 +268,9 @@ class MySink:
 python -m morning_report --config config.json
 ```
 
+配置 `schedule.at` 时按天运行，配置 `schedule.interval_minutes` 时按分钟间隔运行；
+两者二选一。
+
 cron（推荐，进程无需常驻）：
 
 ```cron
@@ -273,7 +279,19 @@ cron（推荐，进程无需常驻）：
 ```
 
 systemd timer 同理，ExecStart 使用 `--once`。`--dry-run` 只收集上下文并打印提示词，
-适合无密钥环境排查数据问题。
+适合无密钥环境排查数据问题。群聊速报的完整部署步骤见
+[群内速报部署指南](morning-report-group.md)。
+
+### 7.5 增量运行与状态
+
+配置 `state_file` 后，每次成功投递都会记录窗口终点和已投递条目的指纹：
+
+- 下一次窗口从「上次终点 - 2 分钟」开始，避免分钟级时间戳造成边界漏读；
+- 已投递条目由指纹过滤，重叠窗口不会造成重复内容；
+- 首次运行没有状态时使用 `lookback_hours` 回看；
+- 投递失败不会推进状态，下一次会重试同一段内容。
+
+`state_file` 是可选能力；不配置时行为与 v0.1 一致（每次按固定 lookback 回看）。
 
 ## 8. 可靠性设计
 
@@ -286,6 +304,7 @@ systemd timer 同理，ExecStart 使用 `--once`。`--dry-run` 只收集上下�
 | 部分投递通道失败 | 记录 warning，其余通道继续；全部失败才抛 `DeliveryError` |
 | 常驻调度中单次失败 | 记录异常，下一天继续 |
 | 常驻进程错过计划时间 | 不自动补跑，等待下一个周期；需要补跑时使用 `--once` |
+| 按分钟间隔运行 | 用 `--once` + cron/systemd timer，并用 `state_file` 只处理新增内容 |
 | 文件落盘 | 同一天重复运行会覆盖当天文件，天然幂等 |
 | 飞书 Webhook | 不自动重试；网络重试可能造成重复消息，交由调用方决定 |
 

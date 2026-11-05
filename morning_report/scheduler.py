@@ -1,4 +1,4 @@
-"""每日定时调度。"""
+"""定时调度：每天固定时刻，或按固定分钟间隔。"""
 
 from __future__ import annotations
 
@@ -68,4 +68,47 @@ class DailyScheduler:
                 log.exception("本次晨报任务执行失败，将在下一个周期重试")
 
 
-__all__ = ["DailyScheduler", "next_run_at", "parse_hhmm"]
+@dataclass
+class IntervalScheduler:
+    """每隔 ``minutes`` 分钟执行一次任务的长驻调度器。
+
+    生产环境更推荐 ``--once`` + cron / systemd timer；这个调度器适合在
+    没有系统定时器的环境里直接常驻。任务抛出的异常会被记录并忽略。
+    """
+
+    minutes: int
+
+    def __post_init__(self) -> None:
+        if isinstance(self.minutes, bool) or not isinstance(self.minutes, int):
+            raise ValueError("间隔必须是整数分钟")
+        if self.minutes < 1:
+            raise ValueError("间隔不能小于 1 分钟")
+
+    def run_forever(
+        self,
+        task: Callable[[datetime], None],
+        *,
+        sleep: Callable[[float], None] = time.sleep,
+        now_fn: Optional[Callable[[], datetime]] = None,
+    ) -> None:
+        interval = self.minutes * 60.0
+        while True:
+            started = now_fn() if now_fn is not None else datetime.now()
+            try:
+                task(started)
+            except Exception:  # noqa: BLE001 - 单次失败不应终止调度
+                log.exception("本次晨报任务执行失败，将在下一个间隔重试")
+            finished = now_fn() if now_fn is not None else datetime.now()
+            elapsed = (finished - started).total_seconds()
+            delay = max(0.0, interval - elapsed)
+            if delay > 0:
+                log.info("下一次晨报在 %.0f 秒后", delay)
+                sleep(delay)
+
+
+__all__ = [
+    "DailyScheduler",
+    "IntervalScheduler",
+    "next_run_at",
+    "parse_hhmm",
+]

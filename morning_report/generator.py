@@ -26,6 +26,23 @@ SYSTEM_PROMPT = """\
 4. 全文不超过 {max_chars} 字，最多展开 {max_items} 条上下文。
 5. 不要输出一级标题、日期标题、代码块或“以下是晨报”之类的开场白。"""
 
+#: 群聊速报使用的提示词：总结群内讨论与双方工作。
+GROUP_SUMMARY_SYSTEM_PROMPT = """\
+你是「PCE 个人上下文引擎」的群内速报编辑。请根据提供的上下文条目，为群成员撰写一份简短的中文速报。
+
+硬性要求：
+1. 只使用上下文条目中的事实，不得编造、不得补充外部信息；信息不足时就省略。
+2. 使用简体中文，语气具体、克制，不写空泛的套话。
+3. 优先总结群内讨论：谁提出了什么、讨论了什么、结论或待办是什么。省略寒暄、无意义的测试消息（如单个数字、表情）和与工作无关的闲谈。
+4. 再总结工作动态，区分「人工成员」和「Agent」各自完成或推进了什么；没有工作动态时省略这一部分。
+5. 不要复述机票、票号、证件号、手机号、住址等敏感个人信息；遇到时用一句概括或直接省略。
+6. 按需要选用以下二级标题，没有内容的章节直接省略：
+   ## 群内讨论
+   ## 工作动态
+   内容很少时可以合并成一段，不强制使用标题。
+7. 全文不超过 {max_chars} 字，最多展开 {max_items} 条上下文。
+8. 只输出 Markdown 正文，不要输出一级标题、日期标题、代码块或“以下是速报”之类的开场白。"""
+
 
 class GenerationError(RuntimeError):
     """调用模型或解析模型输出失败。"""
@@ -50,17 +67,21 @@ class MorningReportGenerator:
         max_items: int = 30,
         max_tokens: int = 1500,
         model: Optional[str] = None,
+        system_prompt: Optional[str] = None,
     ) -> None:
         if not 0 <= temperature <= 2:
             raise ValueError("temperature 必须在 0 到 2 之间")
         if max_chars <= 0 or max_items <= 0 or max_tokens <= 0:
             raise ValueError("max_chars、max_items、max_tokens 必须大于 0")
+        if system_prompt is not None and not system_prompt.strip():
+            raise ValueError("system_prompt 不能为空")
         self._chat_fn = chat_fn
         self.temperature = temperature
         self.max_chars = max_chars
         self.max_items = max_items
         self.max_tokens = max_tokens
         self.model = model
+        self.system_prompt = system_prompt
 
     def build_messages(
         self,
@@ -71,7 +92,10 @@ class MorningReportGenerator:
         user_name: str = "",
     ) -> list[dict[str, str]]:
         """构造 DeepSeek 的 ``messages``，独立出来便于 dry-run 和测试。"""
-        system = SYSTEM_PROMPT.format(max_chars=self.max_chars, max_items=self.max_items)
+        system = (self.system_prompt or SYSTEM_PROMPT)
+        system = system.replace("{max_chars}", str(self.max_chars)).replace(
+            "{max_items}", str(self.max_items)
+        )
         lines = [
             f"日期：{format_date_zh(report_date)}",
             f"上下文时间范围：{_format_moment(window.start)} 至 {_format_moment(window.end)}",
@@ -169,6 +193,7 @@ def _strip_code_fence(text: str) -> str:
 
 __all__ = [
     "EMPTY_REPORT_BODY",
+    "GROUP_SUMMARY_SYSTEM_PROMPT",
     "GenerationError",
     "MorningReportGenerator",
     "SYSTEM_PROMPT",

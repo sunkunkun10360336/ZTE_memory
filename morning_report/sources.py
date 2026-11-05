@@ -122,6 +122,26 @@ def build_source(spec: Mapping[str, Any], *, base_dir: Path) -> ContextSource:
         except TypeError as exc:
             raise SourceError(f"json_file 来源配置错误：{exc}") from exc
 
+    if kind == "feishu_chat":
+        from .feishu import FeishuChatSource
+
+        if not isinstance(data.get("chat_id"), str) or not data["chat_id"].strip():
+            raise SourceError("feishu_chat 来源需要非空 chat_id")
+        try:
+            return FeishuChatSource(**data)
+        except TypeError as exc:
+            raise SourceError(f"feishu_chat 来源配置错误：{exc}") from exc
+
+    if kind == "github_activity":
+        from .github import GitHubActivitySource
+
+        if not isinstance(data.get("repo"), str) or not data["repo"].strip():
+            raise SourceError("github_activity 来源需要非空 repo")
+        try:
+            return GitHubActivitySource(**data)
+        except TypeError as exc:
+            raise SourceError(f"github_activity 来源配置错误：{exc}") from exc
+
     if kind == "python":
         target = data.pop("class", None)
         if not isinstance(target, str) or ":" not in target:

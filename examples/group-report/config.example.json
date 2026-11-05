@@ -1,0 +1,39 @@
+{
+  "timezone": "Asia/Shanghai",
+  "schedule": {
+    "interval_minutes": 5
+  },
+  "state_file": "state.json",
+  "report": {
+    "profile": "group",
+    "title": "群内速报",
+    "footer": "本速报由 PCE 根据群聊与仓库动态自动生成。",
+    "lookback_hours": 24,
+    "lookahead_hours": 0,
+    "max_items": 80,
+    "max_chars": 600,
+    "temperature": 0.3,
+    "empty_body": "过去几分钟没有新的群内讨论或工作动态。"
+  },
+  "sources": [
+    {
+      "type": "feishu_chat",
+      "name": "group-chat",
+      "chat_id": "${FEISHU_CHAT_ID}",
+      "source_label": "群聊"
+    },
+    {
+      "type": "github_activity",
+      "name": "github",
+      "repo": "${GITHUB_REPOSITORY}",
+      "agent_account": "${GITHUB_AGENT_ACCOUNT}",
+      "include_commits": true
+    }
+  ],
+  "delivery": [
+    {
+      "type": "feishu_chat",
+      "chat_id": "${FEISHU_CHAT_ID}"
+    }
+  ]
+}

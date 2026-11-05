@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 from .app import MorningReportApp
 from .config import ConfigError, load_config
 from .delivery import DeliveryError
-from .scheduler import DailyScheduler
+from .scheduler import DailyScheduler, IntervalScheduler
 from .sources import SourceError
 
 log = logging.getLogger(__name__)
@@ -68,12 +68,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 0
 
     if not args.once:
-        at = config.schedule.at
-        print(
-            f"每日晨报已启动：每天 {at.strftime('%H:%M')}（{config.schedule.timezone}）生成，"
-            "Ctrl+C 退出。"
-        )
-        scheduler = DailyScheduler(at, ZoneInfo(config.schedule.timezone))
+        if config.schedule.interval_minutes is not None:
+            minutes = config.schedule.interval_minutes
+            print(
+                f"晨报已启动：每 {minutes} 分钟生成一次（{config.schedule.timezone}），"
+                "Ctrl+C 退出。"
+            )
+            scheduler = IntervalScheduler(minutes)
+        else:
+            at = config.schedule.at
+            print(
+                f"每日晨报已启动：每天 {at.strftime('%H:%M')}（{config.schedule.timezone}）生成，"
+                "Ctrl+C 退出。"
+            )
+            scheduler = DailyScheduler(at, ZoneInfo(config.schedule.timezone))
         try:
             scheduler.run_forever(lambda _target: app.run())
         except KeyboardInterrupt:
@@ -90,7 +98,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     delivered = ", ".join(run.delivered) or "无"
     print(
         f"晨报已生成：{run.report_date.isoformat()}，"
-        f"{len(run.items)} 条上下文，投递通道：{delivered}"
+        f"{run.new_items} 条新上下文，投递通道：{delivered}"
     )
     return 0
 

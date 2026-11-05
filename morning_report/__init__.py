@@ -6,7 +6,9 @@
 - :mod:`morning_report.pipeline` 负责去重、排序和截断；
 - :mod:`morning_report.generator` 负责构造提示词并调用 DeepSeek；
 - :mod:`morning_report.delivery` 负责把晨报投递到控制台、文件或飞书机器人；
-- :mod:`morning_report.scheduler` 负责按天定时触发。
+- :mod:`morning_report.feishu` 负责飞书群聊来源与投递；
+- :mod:`morning_report.github` 负责 GitHub 动态来源；
+- :mod:`morning_report.scheduler` 负责按天或按分钟间隔触发。
 
 架构说明见 ``docs/morning-report-architecture.md``。
 """

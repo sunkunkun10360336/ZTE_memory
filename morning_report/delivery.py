@@ -191,6 +191,13 @@ def build_sink(spec: Mapping[str, Any], *, base_dir: Path) -> Sink:
             raise DeliveryError("feishu_webhook 通道需要非空 url")
         return _construct_sink(FeishuWebhookSink, data, kind)
 
+    if kind == "feishu_chat":
+        from .feishu import FeishuChatSink
+
+        if not isinstance(data.get("chat_id"), str) or not data["chat_id"].strip():
+            raise DeliveryError("feishu_chat 通道需要非空 chat_id")
+        return _construct_sink(FeishuChatSink, data, kind)
+
     if kind == "python":
         target = data.pop("class", None)
         if not isinstance(target, str) or ":" not in target:
