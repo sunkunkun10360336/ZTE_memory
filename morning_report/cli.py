@@ -77,6 +77,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             scheduler = IntervalScheduler(minutes)
         else:
             at = config.schedule.at
+            if at is None:
+                print(
+                    "配置错误：schedule.at 与 schedule.interval_minutes 至少配置一个",
+                    file=sys.stderr,
+                )
+                return 2
             print(
                 f"每日晨报已启动：每天 {at.strftime('%H:%M')}（{config.schedule.timezone}）生成，"
                 "Ctrl+C 退出。"
@@ -98,7 +104,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     delivered = ", ".join(run.delivered) or "无"
     print(
         f"晨报已生成：{run.report_date.isoformat()}，"
-        f"{run.new_items} 条新上下文，投递通道：{delivered}"
+        f"{len(run.items)} 条新上下文，投递通道：{delivered}"
     )
     return 0
 

@@ -122,7 +122,6 @@ class MorningReportApp:
                 content="",
                 prompt=messages_to_text(messages),
                 generated=False,
-                new_items=len(items),
             )
 
         if items:
@@ -159,7 +158,6 @@ class MorningReportApp:
             content=content,
             delivered=delivered,
             generated=generated,
-            new_items=len(items),
         )
 
     def _resolve_now(self, now: Optional[datetime]) -> datetime:

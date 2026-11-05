@@ -71,4 +71,3 @@ class ReportRun:
     delivered: Tuple[str, ...] = ()
     prompt: str = ""
     generated: bool = True
-    new_items: int = 0
